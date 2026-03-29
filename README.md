@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="cover.png" alt="Context Engineering実践入門" width="300" />
+</p>
+
 # Context Engineering Benchmark
 
 LLMの回答品質がコンテキストの与え方によってどう変わるかを定量検証したベンチマーク実験のコードと結果です。
