@@ -53,11 +53,15 @@ python code/run_experiment.py
 ## ディレクトリ構成
 
 ```
-├── code/          # 実験・分析コード
+├── code/          # 本書の全コードブロック(96ファイル)
 ├── results/       # 実験結果データ
 ├── LICENSE        # MIT License
 └── README.md
 ```
+
+:::note
+`requirements.txt` やテストコードは意図的に含めていません。本リポジトリは書籍のコードブロックを章単位で参照するためのリファレンスです。環境構築の手順は書籍の付録Bを参照してください。
+:::
 
 ## 書籍
 
