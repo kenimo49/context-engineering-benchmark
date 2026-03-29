@@ -1,6 +1,3 @@
-# Extracted from ch11a-agentic-rag-concept.md
-# Block #5
-
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolExecutor
 from typing import TypedDict, List

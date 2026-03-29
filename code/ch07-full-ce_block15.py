@@ -1,45 +1,35 @@
-# Extracted from ch07-full-ce.md
-# Block #15
-
-class ContextQualityMetrics:
-    def __init__(self):
-        self.relevance_weight = 0.4
-        self.completeness_weight = 0.3
-        self.coherence_weight = 0.2
-        self.freshness_weight = 0.1
+# DoorDashパターン: 段階的品質チェック
+class DoorDashStyleContextOrchestrator:
+    def orchestrate_context(self, user_query, conversation_history):
+        # Stage 1: 会話要約
+        conversation_summary = self.summarize_conversation(conversation_history)
         
-    def calculate_context_quality(self, context, query, expected_answer=None):
-        metrics = {
-            "relevance": self.calculate_relevance(context, query),
-            "completeness": self.calculate_completeness(context, query),
-            "coherence": self.calculate_coherence(context),
-            "freshness": self.calculate_freshness(context)
-        }
-        
-        # 重み付き総合スコア
-        total_score = (
-            metrics["relevance"] * self.relevance_weight +
-            metrics["completeness"] * self.completeness_weight +
-            metrics["coherence"] * self.coherence_weight +
-            metrics["freshness"] * self.freshness_weight
+        # Stage 2: 関連記事・事例検索  
+        relevant_content = self.multi_source_retrieval(
+            query=user_query,
+            context=conversation_summary
         )
         
-        return {
-            "total_score": total_score,
-            "metrics": metrics,
-            "recommendation": self.get_improvement_recommendation(metrics)
-        }
-    
-    def get_improvement_recommendation(self, metrics):
-        recommendations = []
+        # Stage 3: LLMガードレール品質チェック
+        quality_check = self.quality_validator.validate(relevant_content)
         
-        if metrics["relevance"] < 0.7:
-            recommendations.append("改善推奨: より関連性の高い文書を選択")
-        if metrics["completeness"] < 0.6:
-            recommendations.append("改善推奨: 不足している情報の追加")
-        if metrics["coherence"] < 0.7:
-            recommendations.append("改善推奨: 階層的レイアウトの見直し")
-        if metrics["freshness"] < 0.5:
-            recommendations.append("改善推奨: より新しい情報源の使用")
+        if quality_check.passed:
+            return self.generate_response(user_query, relevant_content)
+        else:
+            return self.fallback_response()
+
+# LinkedInパターン: 知識グラフ統合
+class LinkedInStyleKnowledgeGraphCE:
+    def integrate_structured_knowledge(self, query):
+        # 知識グラフからのサブグラフ抽出
+        relevant_subgraphs = self.knowledge_graph.extract_subgraphs(query)
         
-        return recommendations
+        # テキスト文書との統合
+        text_documents = self.vector_db.similarity_search(query)
+        
+        # 構造化知識 + 非構造化知識の統合
+        integrated_context = self.merge_structured_unstructured(
+            relevant_subgraphs, text_documents
+        )
+        
+        return integrated_context

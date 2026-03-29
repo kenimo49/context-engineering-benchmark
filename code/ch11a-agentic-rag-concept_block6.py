@@ -1,6 +1,3 @@
-# Extracted from ch11a-agentic-rag-concept.md
-# Block #6
-
 from llama_index.core import VectorStoreIndex, ServiceContext
 from llama_index.core.query_engine import SubQuestionQueryEngine
 from llama_index.core.tools import QueryEngineTool

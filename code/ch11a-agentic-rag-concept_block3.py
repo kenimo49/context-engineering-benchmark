@@ -1,6 +1,3 @@
-# Extracted from ch11a-agentic-rag-concept.md
-# Block #3
-
 class MultiAgentRAG:
     def __init__(self):
         # 専門エージェント定義

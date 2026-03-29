@@ -1,21 +1,17 @@
-# Extracted from ch06-rag.md
-# Block #7
-
-def semantic_chunking(text, embedding_model):
-    sentences = split_into_sentences(text)
-    embeddings = [embedding_model.encode(s) for s in sentences]
+class CrossEncoderReranker:
+    def __init__(self, model_name="cross-encoder/ms-marco-MiniLM-L-6-v2"):
+        self.model = CrossEncoder(model_name)
     
-    chunks = []
-    current_chunk = []
-    
-    for i, sentence in enumerate(sentences):
-        if should_start_new_chunk(embeddings[i-1], embeddings[i]):
-            chunks.append(" ".join(current_chunk))
-            current_chunk = [sentence]
-        else:
-            current_chunk.append(sentence)
-    
-    return chunks
-
-# 利点: 意味的一貫性、自然な境界
-# 欠点: 処理コスト高、サイズ不均一
+    def rerank(self, query, candidates, top_k=3):
+        # Query-Document ペアのスコア計算
+        pairs = [(query, doc.content) for doc in candidates]
+        scores = self.model.predict(pairs)
+        
+        # スコア順でソート
+        ranked_docs = sorted(
+            zip(candidates, scores), 
+            key=lambda x: x[1], 
+            reverse=True
+        )
+        
+        return [doc for doc, score in ranked_docs[:top_k]]

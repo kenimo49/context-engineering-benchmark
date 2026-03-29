@@ -1,6 +1,3 @@
-# Extracted from ch13-small-model-philosophy.md
-# Block #8
-
 class ContextAccess:
     def __init__(self, agent_id, security_level):
         self.agent_id = agent_id

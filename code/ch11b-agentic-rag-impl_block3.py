@@ -1,6 +1,3 @@
-# Extracted from ch11b-agentic-rag-impl.md
-# Block #3
-
 # RAG: 意味類似度による検索（しばしば的外れ）
 query = "認証エラーの修正方法"
 rag_results = [

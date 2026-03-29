@@ -1,6 +1,3 @@
-# Extracted from ch11b-agentic-rag-impl.md
-# Block #2
-
 # Claude Code内部で試されたRAGアプローチ
 class TraditionalRAGApproach:
     def __init__(self):

@@ -1,6 +1,3 @@
-# Extracted from ch11b-agentic-rag-impl.md
-# Block #5
-
 # RAG: コード外部保存のリスク
 class RAGSecurity:
     def store_code(self):

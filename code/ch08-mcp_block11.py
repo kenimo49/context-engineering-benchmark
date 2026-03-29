@@ -1,19 +1,12 @@
-# Extracted from ch08-mcp.md
-# Block #11
-
-# 最小限のMCPサーバー
-class SimpleMCPServer:
-    def __init__(self, domain="files"):
-        self.domain = domain
-        self.resources = []
-        self.tools = []
+# 複数ドメイン統合
+class IntegratedMCPServer:
+    def __init__(self):
+        self.domain_servers = {}
+        self.context_orchestrator = ContextOrchestrator()
     
-    def add_resource(self, uri, name, description):
-        self.resources.append(Resource(uri, name, description))
+    def register_domain_server(self, domain, server):
+        self.domain_servers[domain] = server
     
-    def add_tool(self, name, description, handler):
-        self.tools.append(Tool(name, description, handler))
-    
-    async def serve(self):
-        # 基本的なMCPサーバー実装
+    async def handle_cross_domain_request(self, request):
+        # 複数ドメインからのコンテキスト統合
         pass

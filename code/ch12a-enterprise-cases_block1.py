@@ -1,6 +1,3 @@
-# Extracted from ch12a-enterprise-cases.md
-# Block #1
-
 import boto3
 
 def enterprise_rag_query(question: str, user_dept: str, kb_id: str) -> dict:

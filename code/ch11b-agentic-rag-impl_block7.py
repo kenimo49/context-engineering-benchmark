@@ -1,18 +1,17 @@
-# Extracted from ch11b-agentic-rag-impl.md
-# Block #7
-
-# コードベース検索での特性
-code_search_characteristics = {
-    "構造化": "ファイル・ディレクトリ構造が明確",
-    "命名規則": "変数・関数名が検索キーになる",
-    "完全一致重要": "API名、エラーメッセージ等は完全一致が重要",
-    "コンテキスト": "周辺コードとの関係性が重要"
-}
-
-# 文書検索での特性（RAG適用場面）
-document_search_characteristics = {
-    "非構造化": "自由形式テキスト",
-    "意味重要": "同義語・類義語での検索必要",
-    "概念検索": "抽象的概念での関連文書発見",
-    "要約必要": "長文から要点抽出"
-}
+class SearchSystemEvolution:
+    def stage_1_simple(self):
+        return "grep/glob + LLM統合"
+        
+    def stage_2_hybrid(self):
+        return "Agentic Search + 必要時RAG補完"
+        
+    def stage_3_full_rag(self):
+        return "複雑性が正当化される場合のみRAG導入"
+        
+    def decision_criteria(self):
+        return {
+            "データ量": "10万ファイル超でRAG検討",
+            "検索複雑性": "意味検索が頻繁に必要",
+            "運用体制": "インデックス管理の人的リソース確保",
+            "セキュリティ": "外部保存許可の組織ポリシー"
+        }

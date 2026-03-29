@@ -1,6 +1,3 @@
-# Extracted from ch11b-agentic-rag-impl.md
-# Block #12
-
 # claude_code_agentic_search.py
 
 import os

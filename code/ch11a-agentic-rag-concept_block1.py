@@ -1,6 +1,3 @@
-# Extracted from ch11a-agentic-rag-concept.md
-# Block #1
-
 # 従来のRAG（静的検索）
 class TraditionalRAG:
     def __init__(self):

@@ -1,74 +1,52 @@
-# Extracted from ch08-mcp.md
-# Block #5
-
-class ContextAwareTool:
-    def __init__(self, name, description, parameters, context_hints=None):
-        self.name = name
-        self.description = description  # これがLLMのコンテキストになる
-        self.parameters = parameters
-        self.context_hints = context_hints or {}
+class DynamicToolSelector:
+    def __init__(self, available_tools):
+        self.available_tools = available_tools
+        self.usage_analyzer = ToolUsageAnalyzer()
+        
+    def select_relevant_tools(self, user_query, context_budget=5000):
+        """クエリに基づく関連ツールの動的選択"""
+        # Step 1: クエリ分析
+        query_intent = self.analyze_query_intent(user_query)
+        
+        # Step 2: 各ツールの関連性スコアリング  
+        tool_scores = []
+        for tool in self.available_tools:
+            relevance_score = self.calculate_tool_relevance(
+                tool, query_intent
+            )
+            tool_scores.append((tool, relevance_score))
+        
+        # Step 3: トークン予算内での最適選択
+        sorted_tools = sorted(tool_scores, key=lambda x: x[1], reverse=True)
+        selected_tools = self.optimize_for_token_budget(
+            sorted_tools, context_budget
+        )
+        
+        return selected_tools
     
-    def to_context_description(self):
-        """Context Engineering最適化されたツール説明"""
-        context_desc = f"""
-Tool: {self.name}
-
-Purpose: {self.description}
-
-When to use:
-{self._generate_usage_context()}
-
-Parameters:
-{self._format_parameters_for_context()}
-
-Example usage:
-{self._generate_example_usage()}
-
-Context considerations:
-{self._generate_context_considerations()}
-"""
-        return context_desc
-    
-    def _generate_usage_context(self):
-        """いつこのツールを使うべきかの説明"""
-        usage_patterns = self.context_hints.get('usage_patterns', [])
+    def calculate_tool_relevance(self, tool, query_intent):
+        """ツールとクエリ意図の関連性スコア"""
+        # セマンティック類似度
+        semantic_score = self.calculate_semantic_similarity(
+            tool.description, query_intent.description
+        )
         
-        if not usage_patterns:
-            return "Use when the task requires this tool's functionality."
+        # 過去の使用パターン
+        usage_score = self.usage_analyzer.get_usage_probability(
+            tool.name, query_intent.category
+        )
         
-        return "\n".join([f"- {pattern}" for pattern in usage_patterns])
-    
-    def _generate_context_considerations(self):
-        """Context Engineering上の考慮事項"""
-        considerations = []
+        # カテゴリマッチング
+        category_score = self.calculate_category_match(
+            tool.context_hints.get('categories', []),
+            query_intent.categories
+        )
         
-        if self.context_hints.get('high_latency'):
-            considerations.append("Tool has high latency - consider batching requests")
+        # 重み付き合計
+        total_score = (
+            semantic_score * 0.5 +
+            usage_score * 0.3 +
+            category_score * 0.2
+        )
         
-        if self.context_hints.get('expensive_operation'):
-            considerations.append("Tool is expensive - verify necessity before use")
-        
-        if self.context_hints.get('requires_confirmation'):
-            considerations.append("Tool requires user confirmation for destructive operations")
-        
-        return "\n".join([f"- {c}" for c in considerations])
-
-# 実際のツール定義例
-email_tool = ContextAwareTool(
-    name="send_email",
-    description="Send an email to specified recipients with subject and body",
-    parameters={
-        "to": {"type": "string", "description": "Recipient email address"},
-        "subject": {"type": "string", "description": "Email subject line"},
-        "body": {"type": "string", "description": "Email body content"}
-    },
-    context_hints={
-        "usage_patterns": [
-            "User explicitly requests to send an email",
-            "Automated notification is required",
-            "Follow-up communication is needed"
-        ],
-        "expensive_operation": True,
-        "requires_confirmation": True
-    }
-)
+        return total_score

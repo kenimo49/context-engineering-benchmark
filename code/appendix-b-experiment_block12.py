@@ -1,62 +1,49 @@
-# Extracted from appendix-b-experiment.md
-# Block #12
+# monitoring.py
+import logging
+from datetime import datetime
+import psutil
+import time
 
-# domain_evaluator.py
-class DomainSpecificEvaluator:
-    def __init__(self, domain: str):
-        self.domain = domain
-        self.evaluation_methods = {
-            'legal': self._evaluate_legal,
-            'medical': self._evaluate_medical,
-            'technical': self._evaluate_technical,
-            'financial': self._evaluate_financial
-        }
-    
-    def evaluate(self, response: str, expected: Dict) -> Dict[str, float]:
-        """ドメイン特化評価"""
-        evaluator = self.evaluation_methods.get(
-            self.domain, self._evaluate_general
+class ExperimentMonitor:
+    def __init__(self, log_file: str = "experiment.log"):
+        logging.basicConfig(
+            filename=log_file,
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
         )
-        return evaluator(response, expected)
+        self.logger = logging.getLogger(__name__)
+        self.start_time = None
+        self.api_calls = 0
+        self.errors = 0
+        
+    def start_experiment(self, experiment_name: str):
+        """実験開始"""
+        self.start_time = time.time()
+        self.logger.info(f"Starting experiment: {experiment_name}")
+        self.logger.info(f"System info - CPU: {psutil.cpu_count()}, Memory: {psutil.virtual_memory().total / 1e9:.1f}GB")
     
-    def _evaluate_legal(self, response: str, expected: Dict) -> Dict[str, float]:
-        """法務文書用評価"""
-        scores = {}
+    def log_api_call(self, model: str, success: bool, response_time: float):
+        """API呼び出しのログ"""
+        self.api_calls += 1
+        if not success:
+            self.errors += 1
+            
+        self.logger.info(f"API call - Model: {model}, Success: {success}, Time: {response_time:.2f}s")
         
-        # 法的精度（条文、判例の正確性）
-        if 'legal_references' in expected:
-            refs = expected['legal_references']
-            correct_refs = sum(1 for ref in refs if ref in response)
-            scores['legal_accuracy'] = correct_refs / len(refs) if refs else 0
-        
-        # リスク言及の適切性
-        risk_keywords = ['リスク', '注意', '但し', 'ただし', '例外']
-        risk_mentioned = any(kw in response for kw in risk_keywords)
-        scores['risk_awareness'] = 1.0 if risk_mentioned else 0.0
-        
-        return scores
+        if self.api_calls % 100 == 0:
+            self._log_progress()
     
-    def _evaluate_technical(self, response: str, expected: Dict) -> Dict[str, float]:
-        """技術文書用評価"""
-        scores = {}
+    def _log_progress(self):
+        """進捗の記録"""
+        elapsed = time.time() - self.start_time
+        error_rate = (self.errors / self.api_calls) * 100 if self.api_calls > 0 else 0
         
-        # コード例の正確性
-        if 'code_elements' in expected:
-            elements = expected['code_elements']
-            present = sum(1 for elem in elements if elem in response)
-            scores['code_accuracy'] = present / len(elements) if elements else 0
-        
-        # 技術用語の適切性
-        if 'technical_terms' in expected:
-            terms = expected['technical_terms']
-            used_correctly = sum(1 for term in terms if term in response)
-            scores['terminology'] = used_correctly / len(terms) if terms else 0
-        
-        return scores
+        self.logger.info(f"Progress - Calls: {self.api_calls}, "
+                        f"Elapsed: {elapsed:.1f}s, "
+                        f"Error rate: {error_rate:.1f}%")
     
-    def _evaluate_general(self, response: str, expected: Dict) -> Dict[str, float]:
-        """一般的な評価"""
-        return {
-            'relevance': self._calculate_relevance(response, expected),
-            'completeness': self._calculate_completeness(response, expected)
-        }
+    def finish_experiment(self):
+        """実験終了"""
+        total_time = time.time() - self.start_time
+        self.logger.info(f"Experiment completed in {total_time:.1f}s")
+        self.logger.info(f"Total API calls: {self.api_calls}, Errors: {self.errors}")

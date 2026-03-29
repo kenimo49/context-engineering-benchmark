@@ -1,50 +1,51 @@
-# Extracted from ch08-mcp.md
-# Block #3
-
-class DatabaseMCPClient:
-    """データベースコンテキスト専用クライアント"""
+class CodeRepositoryMCPServer:
+    """コードリポジトリ専用MCPサーバー"""
     
-    def __init__(self, connection_string):
-        self.connection = DatabaseConnection(connection_string)
-        self.schema_analyzer = SchemaAnalyzer()
+    def __init__(self, repository_path):
+        self.repo_path = repository_path
+        self.code_analyzer = CodeStructureAnalyzer()
+        self.git_analyzer = GitHistoryAnalyzer()
         
-    async def get_contextual_data(self, query, context_scope):
-        # Step 1: クエリからデータベース検索意図を抽出
-        search_intent = self.extract_search_intent(query)
-        
-        # Step 2: 関連テーブル・カラム特定
-        relevant_schema = self.schema_analyzer.find_relevant_schema(
-            search_intent
-        )
-        
-        # Step 3: Context Engineering最適化クエリ生成
-        optimized_query = self.generate_context_optimized_query(
-            search_intent,
-            relevant_schema,
-            max_rows=100  # コンテキスト制限
-        )
-        
-        # Step 4: データ取得・構造化
-        raw_results = await self.connection.execute(optimized_query)
-        structured_context = self.format_for_context(raw_results)
-        
-        return structured_context
-    
-    def format_for_context(self, raw_results):
-        """データベース結果をLLMコンテキスト用に最適化"""
-        if len(raw_results) == 0:
-            return "No relevant data found in database."
-        
-        # サンプリング + 要約戦略
-        if len(raw_results) > 20:
-            sample_results = random.sample(raw_results, 10)
-            summary = f"Found {len(raw_results)} records. Sample of 10 shown below:"
+    async def handle_resource_request(self, resource_uri):
+        if resource_uri.startswith("code://"):
+            return await self.get_code_context(resource_uri)
+        elif resource_uri.startswith("git://"):
+            return await self.get_git_context(resource_uri)
         else:
-            sample_results = raw_results
-            summary = f"Found {len(raw_results)} records:"
+            raise ValueError(f"Unsupported resource URI: {resource_uri}")
+    
+    async def get_code_context(self, resource_uri):
+        # パスの解析
+        file_path = resource_uri.replace("code://", "")
+        full_path = os.path.join(self.repo_path, file_path)
         
-        formatted = f"Database Results: {summary}\n"
-        for i, record in enumerate(sample_results, 1):
-            formatted += f"{i}. {self.format_record_summary(record)}\n"
+        if os.path.isfile(full_path):
+            return await self.get_file_context(full_path)
+        elif os.path.isdir(full_path):
+            return await self.get_directory_context(full_path)
+        else:
+            raise FileNotFoundError(f"Path not found: {file_path}")
+    
+    async def get_file_context(self, file_path):
+        """ファイルのContext Engineering最適化"""
+        # ファイル分析
+        analysis = self.code_analyzer.analyze_file(file_path)
         
-        return formatted
+        context = {
+            "file_path": file_path,
+            "language": analysis.language,
+            "summary": analysis.summary,
+            "key_functions": analysis.key_functions[:5],  # 重要な関数のみ
+            "dependencies": analysis.dependencies,
+            "recent_changes": await self.git_analyzer.get_recent_changes(
+                file_path, days=7
+            )
+        }
+        
+        # Context用に最適化されたファイル内容
+        if analysis.estimated_tokens > 2000:
+            context["content"] = self.summarize_code_file(file_path)
+        else:
+            context["content"] = self.read_file_with_line_numbers(file_path)
+        
+        return context

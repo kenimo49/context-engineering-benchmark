@@ -1,6 +1,3 @@
-# Extracted from ch11b-agentic-rag-impl.md
-# Block #4
-
 # RAG運用の複雑性
 class RAGMaintenance:
     def maintain_indexes(self):

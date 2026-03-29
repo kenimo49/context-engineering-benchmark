@@ -1,6 +1,3 @@
-# Extracted from ch12a-enterprise-cases.md
-# Block #4
-
 import re
 
 def detect_and_mask_pii(content: str) -> dict:

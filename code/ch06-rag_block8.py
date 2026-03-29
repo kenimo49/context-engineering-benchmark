@@ -1,22 +1,37 @@
-# Extracted from ch06-rag.md
-# Block #8
+def filtered_search(vector_db, query, filters=None):
+    base_results = vector_db.similarity_search(query, k=50)
+    
+    if not filters:
+        return base_results[:5]
+    
+    filtered_results = []
+    for doc in base_results:
+        if matches_filters(doc.metadata, filters):
+            filtered_results.append(doc)
+        
+        if len(filtered_results) >= 5:
+            break
+    
+    return filtered_results
 
-def recursive_chunking(text, max_size=1000):
-    if len(text) <= max_size:
-        return [text]
+def matches_filters(metadata, filters):
+    for key, value in filters.items():
+        if key == "date_range":
+            if not (value["start"] <= metadata["date"] <= value["end"]):
+                return False
+        elif key == "category":
+            if metadata.get("category") != value:
+                return False
+        elif key == "language":
+            if metadata.get("language") != value:
+                return False
     
-    # 段落で分割を試行
-    paragraphs = text.split("\n\n")
-    if all(len(p) <= max_size for p in paragraphs):
-        return paragraphs
-    
-    # 文で分割を試行  
-    sentences = text.split("。")
-    if all(len(s) <= max_size for s in sentences):
-        return sentences
-    
-    # 最後の手段: 固定長分割
-    return fixed_length_chunking(text, max_size)
+    return True
 
-# 利点: 適応的、階層的
-# 欠点: 複雑なロジック
+# 使用例
+filters = {
+    "category": "technical",
+    "language": "ja", 
+    "date_range": {"start": "2024-01-01", "end": "2024-12-31"}
+}
+results = filtered_search(vector_db, "RAGの実装方法", filters)

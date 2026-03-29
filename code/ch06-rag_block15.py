@@ -1,30 +1,37 @@
-# Extracted from ch06-rag.md
-# Block #15
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
-class GrabAnalyticalRAG:
-    def __init__(self):
-        self.data_apis = DataArksAPI()
-        self.report_templates = ReportTemplateDB()
+class ParallelEmbeddingProcessor:
+    def __init__(self, embedding_model, batch_size=32):
+        self.embedding_model = embedding_model
+        self.batch_size = batch_size
         
-    def generate_report(self, report_request):
-        # 関連するAPIとクエリの選択
-        relevant_apis = self.data_apis.select_relevant_apis(
-            domain=report_request.domain,
-            metrics=report_request.metrics
-        )
+    async def process_documents(self, documents):
+        # 文書をチャンクに分割
+        chunks = []
+        for doc in documents:
+            doc_chunks = self.chunk_document(doc)
+            chunks.extend(doc_chunks)
         
-        # データ取得・加工
-        raw_data = self.data_apis.execute_queries(relevant_apis)
+        # バッチ処理で埋め込み生成
+        embeddings = await self.embed_chunks_parallel(chunks)
         
-        # 類似レポートテンプレート検索
-        similar_reports = self.report_templates.find_similar(
-            request=report_request,
-            top_k=3
-        )
+        return list(zip(chunks, embeddings))
+    
+    async def embed_chunks_parallel(self, chunks):
+        batches = [chunks[i:i + self.batch_size] 
+                  for i in range(0, len(chunks), self.batch_size)]
         
-        # LLMでレポート生成
-        return self.generate_analytical_report(
-            data=raw_data,
-            templates=similar_reports,
-            request=report_request
-        )
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            tasks = [
+                asyncio.get_event_loop().run_in_executor(
+                    executor, 
+                    self.embedding_model.encode, 
+                    batch
+                ) for batch in batches
+            ]
+            
+            results = await asyncio.gather(*tasks)
+        
+        # バッチ結果の統合
+        return [embedding for batch in results for embedding in batch]

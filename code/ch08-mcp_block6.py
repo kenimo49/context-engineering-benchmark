@@ -1,55 +1,49 @@
-# Extracted from ch08-mcp.md
-# Block #6
+# CLI Implementation（114,000トークン）
+class TraditionalCLIApproach:
+    def automate_web_task(self, task_description):
+        # Step 1: タスクを細かいCLIコマンドに分解
+        cli_commands = self.decompose_to_cli_commands(task_description)
+        
+        # Step 2: 各コマンドの説明をコンテキストに含める
+        context = "Available CLI commands:\n"
+        context += self.generate_cli_documentation()  # 巨大なドキュメント
+        
+        # Step 3: 実行例とエラーハンドリングもコンテキストに含める
+        context += self.generate_cli_examples()
+        context += self.generate_error_handling_docs()
+        
+        # 結果: 114,000トークンの巨大コンテキスト
+        return self.llm_with_massive_context(task_description, context)
 
-class DynamicToolSelector:
-    def __init__(self, available_tools):
-        self.available_tools = available_tools
-        self.usage_analyzer = ToolUsageAnalyzer()
+# MCP Implementation（27,000トークン）  
+class MCPPlaywrightApproach:
+    def automate_web_task(self, task_description):
+        # Step 1: 高レベルなPlaywright MCPツールを使用
+        available_tools = [
+            "playwright_navigate(url)",
+            "playwright_click(selector)",
+            "playwright_type(selector, text)",
+            "playwright_screenshot()",
+            "playwright_extract_text(selector)"
+        ]
         
-    def select_relevant_tools(self, user_query, context_budget=5000):
-        """クエリに基づく関連ツールの動的選択"""
-        # Step 1: クエリ分析
-        query_intent = self.analyze_query_intent(user_query)
+        # Step 2: 簡潔なツール説明のみコンテキストに含める
+        context = self.generate_concise_tool_descriptions(available_tools)
         
-        # Step 2: 各ツールの関連性スコアリング  
-        tool_scores = []
-        for tool in self.available_tools:
-            relevance_score = self.calculate_tool_relevance(
-                tool, query_intent
-            )
-            tool_scores.append((tool, relevance_score))
-        
-        # Step 3: トークン予算内での最適選択
-        sorted_tools = sorted(tool_scores, key=lambda x: x[1], reverse=True)
-        selected_tools = self.optimize_for_token_budget(
-            sorted_tools, context_budget
-        )
-        
-        return selected_tools
+        # Step 3: MCPサーバーが詳細な実装を処理
+        return self.llm_with_optimized_context(task_description, context)
     
-    def calculate_tool_relevance(self, tool, query_intent):
-        """ツールとクエリ意図の関連性スコア"""
-        # セマンティック類似度
-        semantic_score = self.calculate_semantic_similarity(
-            tool.description, query_intent.description
-        )
+    def generate_concise_tool_descriptions(self, tools):
+        """MCP用の最適化されたツール説明"""
+        descriptions = []
         
-        # 過去の使用パターン
-        usage_score = self.usage_analyzer.get_usage_probability(
-            tool.name, query_intent.category
-        )
+        for tool in tools:
+            # 必要最小限の情報のみ
+            desc = {
+                "name": tool.split("(")[0],
+                "purpose": self.get_tool_purpose(tool),
+                "when_to_use": self.get_usage_pattern(tool)
+            }
+            descriptions.append(desc)
         
-        # カテゴリマッチング
-        category_score = self.calculate_category_match(
-            tool.context_hints.get('categories', []),
-            query_intent.categories
-        )
-        
-        # 重み付き合計
-        total_score = (
-            semantic_score * 0.5 +
-            usage_score * 0.3 +
-            category_score * 0.2
-        )
-        
-        return total_score
+        return json.dumps(descriptions, indent=2)  # 簡潔なJSON形式

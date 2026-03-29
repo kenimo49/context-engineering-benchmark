@@ -1,6 +1,3 @@
-# Extracted from ch11b-agentic-rag-impl.md
-# Block #1
-
 from tavily import TavilyClient
 import os
 

@@ -1,6 +1,3 @@
-# Extracted from ch05-few-shot.md
-# Block #10
-
 # ❌ バイアスのあるexample
 examples = [
     {"user": "田中", "response": "丁寧語で対応"},

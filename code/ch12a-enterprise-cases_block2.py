@@ -1,6 +1,3 @@
-# Extracted from ch12a-enterprise-cases.md
-# Block #2
-
 class HighVolumeEnterpriseRAG:
     def __init__(self):
         self.vector_db = PineconeVectorDB()

@@ -1,6 +1,3 @@
-# Extracted from ch08-mcp.md
-# Block #18
-
 # 既存API のMCPラッパー
 class APIMCPWrapper:
     def __init__(self, api_base_url, api_key):

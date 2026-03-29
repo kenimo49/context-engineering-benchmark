@@ -1,6 +1,3 @@
-# Extracted from ch13-small-model-philosophy.md
-# Block #9
-
 def calculate_monthly_cost(
     queries_per_day: int,
     avg_input_tokens: int,

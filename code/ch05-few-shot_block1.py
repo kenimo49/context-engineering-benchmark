@@ -1,6 +1,3 @@
-# Extracted from ch05-few-shot.md
-# Block #6
-
 # ❌ 単調なexample
 examples = [
     {"input": "商品Aについて", "output": "商品Aは..."},

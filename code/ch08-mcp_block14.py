@@ -1,35 +1,12 @@
-# Extracted from ch08-mcp.md
-# Block #14
-
-class MCPServerQualityEvaluator:
-    def __init__(self):
-        self.metrics = {
-            "context_relevance": ContextRelevanceMetric(),
-            "response_latency": ResponseLatencyMetric(),
-            "resource_efficiency": ResourceEfficiencyMetric(),
-            "error_handling": ErrorHandlingMetric()
-        }
+# 社内データベースへの読み取り専用アクセス
+class ReadOnlyDBMCPServer:
+    def __init__(self, connection_string):
+        self.db = create_readonly_connection(connection_string)
     
-    def evaluate_server(self, server, test_scenarios):
-        results = {}
-        
-        for scenario in test_scenarios:
-            scenario_results = {}
-            
-            for metric_name, metric in self.metrics.items():
-                score = metric.evaluate(server, scenario)
-                scenario_results[metric_name] = score
-            
-            results[scenario.name] = scenario_results
-        
-        return self.generate_quality_report(results)
-    
-    def generate_quality_report(self, results):
-        report = {
-            "overall_score": self.calculate_overall_score(results),
-            "strengths": self.identify_strengths(results),
-            "improvement_areas": self.identify_improvement_areas(results),
-            "recommendations": self.generate_recommendations(results)
-        }
-        
-        return report
+    def register_tools(self):
+        return [
+            Tool(
+                name="search_records",
+                description="Search database records for context information"
+            )
+        ]

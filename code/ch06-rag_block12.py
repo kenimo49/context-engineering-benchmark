@@ -1,40 +1,20 @@
-# Extracted from ch06-rag.md
-# Block #12
+# ❌ 問題のあるRAG実装
+def naive_rag(query, vector_db):
+    # 大量の文書を無差別取得
+    docs = vector_db.similarity_search(query, k=20)
+    
+    # 全てをコンテキストに詰め込み
+    context = "\n".join([doc.content for doc in docs])
+    
+    return llm.generate(f"Question: {query}\n\nContext: {context}")
 
-def filtered_search(vector_db, query, filters=None):
-    base_results = vector_db.similarity_search(query, k=50)
+# ✅ 改善されたRAG実装  
+def optimized_rag(query, vector_db):
+    # 関連性スコアでフィルタリング
+    docs = vector_db.similarity_search_with_score(query, k=10)
+    relevant_docs = [doc for doc, score in docs if score > 0.7]
     
-    if not filters:
-        return base_results[:5]
+    # トークン制限内で最適化
+    context = self.optimize_context_for_tokens(relevant_docs, max_tokens=8000)
     
-    filtered_results = []
-    for doc in base_results:
-        if matches_filters(doc.metadata, filters):
-            filtered_results.append(doc)
-        
-        if len(filtered_results) >= 5:
-            break
-    
-    return filtered_results
-
-def matches_filters(metadata, filters):
-    for key, value in filters.items():
-        if key == "date_range":
-            if not (value["start"] <= metadata["date"] <= value["end"]):
-                return False
-        elif key == "category":
-            if metadata.get("category") != value:
-                return False
-        elif key == "language":
-            if metadata.get("language") != value:
-                return False
-    
-    return True
-
-# 使用例
-filters = {
-    "category": "technical",
-    "language": "ja", 
-    "date_range": {"start": "2024-01-01", "end": "2024-12-31"}
-}
-results = filtered_search(vector_db, "RAGの実装方法", filters)
+    return llm.generate(f"Question: {query}\n\nContext: {context}")

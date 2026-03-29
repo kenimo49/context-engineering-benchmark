@@ -1,56 +1,55 @@
-# Extracted from ch07-full-ce.md
-# Block #6
-
-class HierarchicalLayoutManager:
+class ToolOutputStructurizer:
     def __init__(self):
-        self.importance_weights = {
-            "critical": 1.0,
-            "important": 0.8,
-            "supporting": 0.6,
-            "background": 0.4
+        self.output_formatters = {
+            "api_response": APIResponseFormatter(),
+            "database_query": DatabaseResultFormatter(), 
+            "file_content": FileContentFormatter(),
+            "web_scrape": WebContentFormatter()
         }
     
-    def structure_context(self, documents, query):
-        # 重要度スコアリング
-        scored_docs = []
-        for doc in documents:
-            importance = self.calculate_importance(doc, query)
-            scored_docs.append((doc, importance))
+    def structure_tool_output(self, tool_name, raw_output, context_purpose):
+        formatter = self.output_formatters.get(
+            self.get_tool_type(tool_name),
+            DefaultFormatter()
+        )
         
-        # 階層化レイアウト生成
-        return self.create_hierarchical_layout(scored_docs)
+        structured_output = formatter.format(
+            raw_output, 
+            context_purpose=context_purpose
+        )
+        
+        return self.add_metadata(structured_output, tool_name)
     
-    def create_hierarchical_layout(self, scored_docs):
-        layout = {
-            "primary_context": [],
-            "supporting_context": [],
-            "background_context": []
+    def add_metadata(self, structured_output, tool_name):
+        return {
+            "source": f"Tool: {tool_name}",
+            "timestamp": datetime.utcnow().isoformat(),
+            "content": structured_output,
+            "type": "tool_output"
         }
-        
-        for doc, score in scored_docs:
-            if score > 0.8:
-                layout["primary_context"].append(doc)
-            elif score > 0.5:
-                layout["supporting_context"].append(doc)
+
+class APIResponseFormatter:
+    def format(self, raw_response, context_purpose="general"):
+        try:
+            data = json.loads(raw_response)
+            
+            if context_purpose == "debugging":
+                return self.format_for_debugging(data)
+            elif context_purpose == "user_info":
+                return self.format_for_user_info(data)
             else:
-                layout["background_context"].append(doc)
-        
-        return self.format_hierarchical_prompt(layout)
+                return self.format_general(data)
+                
+        except json.JSONDecodeError:
+            return f"Raw response: {raw_response[:500]}..."
     
-    def format_hierarchical_prompt(self, layout):
-        prompt = "# PRIMARY CONTEXT (Most Relevant)\n"
-        for i, doc in enumerate(layout["primary_context"], 1):
-            prompt += f"## Source {i}: {doc.metadata.get('title', 'Document')}\n"
-            prompt += f"{doc.content}\n\n"
+    def format_for_user_info(self, data):
+        # ユーザー情報として重要な部分のみ抽出
+        essential_fields = ["id", "name", "email", "status", "last_login"]
         
-        if layout["supporting_context"]:
-            prompt += "# SUPPORTING CONTEXT (Additional Details)\n"
-            for doc in layout["supporting_context"]:
-                prompt += f"- {doc.content[:200]}...\n"
+        formatted = "User Information:\n"
+        for field in essential_fields:
+            if field in data:
+                formatted += f"- {field.replace('_', ' ').title()}: {data[field]}\n"
         
-        if layout["background_context"]:
-            prompt += "# BACKGROUND CONTEXT (Reference Only)\n"
-            for doc in layout["background_context"]:
-                prompt += f"- {doc.metadata.get('title', 'Reference')}\n"
-        
-        return prompt
+        return formatted

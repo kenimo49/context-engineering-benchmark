@@ -1,39 +1,36 @@
-# Extracted from ch07-full-ce.md
-# Block #7
-
-class DynamicContextSelector:
-    def __init__(self, memory_manager):
-        self.memory_manager = memory_manager
-        self.conversation_tracker = ConversationTracker()
+class ContextEngineeringROIAnalyzer:
+    def analyze_implementation_roi(self, current_performance, techniques):
+        analysis = {}
         
-    def select_dynamic_context(self, current_query, conversation_history):
-        # 会話の進行状況分析
-        conversation_state = self.conversation_tracker.analyze_state(
-            conversation_history
-        )
+        for technique in techniques:
+            implementation_cost = self.estimate_implementation_cost(technique)
+            expected_improvement = self.estimate_improvement(technique)
+            maintenance_cost = self.estimate_maintenance_cost(technique)
+            
+            roi = self.calculate_roi(
+                implementation_cost,
+                expected_improvement,
+                maintenance_cost
+            )
+            
+            analysis[technique] = {
+                "implementation_weeks": implementation_cost["weeks"],
+                "expected_improvement_percentage": expected_improvement,
+                "monthly_maintenance_hours": maintenance_cost["hours"],
+                "roi_score": roi,
+                "recommendation": self.get_recommendation(roi)
+            }
         
-        # 段階に応じたコンテキスト選択
-        if conversation_state.stage == "problem_identification":
-            return self.select_diagnostic_context(current_query)
-        elif conversation_state.stage == "solution_exploration":
-            return self.select_solution_context(current_query, conversation_state)
-        elif conversation_state.stage == "implementation":
-            return self.select_implementation_context(current_query)
-        else:
-            return self.select_general_context(current_query)
+        return analysis
     
-    def select_solution_context(self, query, state):
-        # 既に特定された問題に基づく解決策検索
-        problem_context = state.identified_problems
+    def estimate_implementation_cost(self, technique):
+        cost_matrix = {
+            "selective_retrieval": {"weeks": 2, "complexity": "medium"},
+            "context_compression": {"weeks": 3, "complexity": "high"},
+            "hierarchical_layout": {"weeks": 1, "complexity": "low"},
+            "dynamic_context": {"weeks": 4, "complexity": "high"},
+            "memory_management": {"weeks": 3, "complexity": "high"},
+            "tool_structuring": {"weeks": 2, "complexity": "medium"}
+        }
         
-        solution_docs = self.vector_db.search(
-            query=f"{query} {problem_context}",
-            filter_metadata={"type": "solution", "problem_category": state.category}
-        )
-        
-        # 過去の成功事例も追加
-        success_cases = self.memory_manager.get_successful_cases(
-            problem_type=state.category
-        )
-        
-        return self.merge_contexts(solution_docs, success_cases)
+        return cost_matrix.get(technique, {"weeks": 2, "complexity": "medium"})

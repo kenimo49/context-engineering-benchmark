@@ -1,6 +1,3 @@
-# Extracted from ch11a-agentic-rag-concept.md
-# Block #2
-
 class SingleAgentRAG:
     def __init__(self):
         self.agent = AutonomousAgent(

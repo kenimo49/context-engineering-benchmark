@@ -1,85 +1,70 @@
-# Extracted from ch08-mcp.md
-# Block #8
-
-class CustomerDataMCPServer:
-    """顧客データ専用MCPサーバー"""
+class EnterpriseContextAggregatorMCP:
+    """エンタープライズ環境の統合コンテキストサーバー"""
     
-    def __init__(self, database_config):
-        self.db = CustomerDatabase(database_config)
-        self.privacy_filter = PrivacyFilter()
+    def __init__(self):
+        self.connectors = {
+            "jira": JiraConnector(),
+            "confluence": ConfluenceConnector(),
+            "github": GitHubConnector(),
+            "slack": SlackConnector()
+        }
         
-    def register_resources(self):
-        return [
-            Resource(
-                uri="customer://profile/{customer_id}",
-                name="Customer Profile",
-                description="Customer profile information with privacy filtering",
-                mime_type="application/json"
-            ),
-            Resource(
-                uri="customer://orders/{customer_id}",
-                name="Order History", 
-                description="Customer order history for support context",
-                mime_type="application/json"
-            )
-        ]
-    
     def register_tools(self):
         return [
             Tool(
-                name="lookup_customer",
-                description="Look up customer information by email or ID for support context",
+                name="get_project_context",
+                description="Gather comprehensive project context from multiple sources (Jira, GitHub, Confluence)",
                 input_schema={
-                    "type": "object",
+                    "type": "object", 
                     "properties": {
-                        "identifier": {"type": "string", "description": "Email or customer ID"},
-                        "include_orders": {"type": "boolean", "default": False}
-                    }
-                }
-            ),
-            Tool(
-                name="update_customer_notes", 
-                description="Add support notes to customer profile",
-                input_schema={
-                    "type": "object",
-                    "properties": {
-                        "customer_id": {"type": "string"},
-                        "note": {"type": "string", "description": "Support interaction note"}
+                        "project_key": {"type": "string"},
+                        "include_sources": {
+                            "type": "array",
+                            "items": {"enum": ["jira", "github", "confluence", "slack"]},
+                            "default": ["jira", "github"]
+                        }
                     }
                 }
             )
         ]
     
-    async def handle_tool_call(self, tool_name, arguments):
-        if tool_name == "lookup_customer":
-            return await self.lookup_customer_for_context(arguments)
-        elif tool_name == "update_customer_notes":
-            return await self.update_customer_notes(arguments)
-        else:
-            raise ValueError(f"Unknown tool: {tool_name}")
-    
-    async def lookup_customer_for_context(self, arguments):
-        """Context Engineering最適化された顧客検索"""
-        customer_data = await self.db.lookup_customer(arguments["identifier"])
+    async def get_project_context(self, project_key, include_sources):
+        """マルチドメイン プロジェクトコンテキスト統合"""
+        context_parts = {}
         
-        if not customer_data:
-            return {"error": "Customer not found"}
+        # 並列でコンテキスト取得
+        tasks = []
+        for source in include_sources:
+            if source in self.connectors:
+                tasks.append(
+                    self.get_source_context(source, project_key)
+                )
         
-        # プライバシーフィルタリング
-        filtered_data = self.privacy_filter.filter_for_support_context(
-            customer_data
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # 結果統合
+        for source, result in zip(include_sources, results):
+            if isinstance(result, Exception):
+                context_parts[source] = {"error": str(result)}
+            else:
+                context_parts[source] = result
+        
+        # 統合コンテキストの構造化
+        integrated_context = self.integrate_multi_source_context(
+            project_key, context_parts
         )
         
-        # Context用の構造化
-        context_optimized = {
-            "customer_summary": filtered_data["summary"],
-            "support_relevant_info": filtered_data["support_info"],
-            "recent_interactions": filtered_data["recent_interactions"][:3]
+        return integrated_context
+    
+    def integrate_multi_source_context(self, project_key, context_parts):
+        """マルチソースコンテキストの知的統合"""
+        integrated = {
+            "project": project_key,
+            "summary": self.generate_project_summary(context_parts),
+            "current_status": self.extract_current_status(context_parts),
+            "key_contributors": self.identify_key_contributors(context_parts),
+            "recent_activity": self.aggregate_recent_activity(context_parts),
+            "blockers_and_issues": self.identify_blockers(context_parts)
         }
         
-        if arguments.get("include_orders"):
-            context_optimized["recent_orders"] = await self.get_recent_orders_summary(
-                customer_data["id"]
-            )
-        
-        return context_optimized
+        return integrated

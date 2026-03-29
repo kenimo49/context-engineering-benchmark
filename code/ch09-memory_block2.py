@@ -1,6 +1,3 @@
-# Extracted from ch09-memory.md
-# Block #2
-
 # 設計パターン説明用の擬似コード（そのまま動作するコードではありません）
 
 class SummaryMemory:

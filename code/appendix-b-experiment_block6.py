@@ -1,43 +1,37 @@
-# Extracted from appendix-b-experiment.md
-# Block #6
+# main_experiment.py
+from dotenv import load_dotenv
+import os
 
-from sentence_transformers import SentenceTransformer
-import chromadb
-from chromadb.config import Settings
+load_dotenv()
 
-class RAGSystem:
-    def __init__(self):
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.chroma_client = chromadb.Client(Settings(anonymized_telemetry=False))
-        self.collection = None
+def run_full_experiment():
+    benchmark = ContextEngineeringBenchmark(
+        api_key=os.environ.get("ANTHROPIC_API_KEY")
+    )
     
-    def build_knowledge_base(self, documents: List[str], collection_name: str = "knowledge"):
-        """知識ベースの構築"""
-        # コレクション作成
-        self.collection = self.chroma_client.create_collection(name=collection_name)
+    models = [
+        "claude-3-haiku-20240307",
+        "claude-3-sonnet-20241022"
+    ]
+    
+    all_results = []
+    
+    for model in models:
+        print(f"Testing {model}...")
         
-        # 文書の埋め込み生成とインデックス化
-        for i, doc in enumerate(documents):
-            embedding = self.embedding_model.encode(doc).tolist()
-            self.collection.add(
-                embeddings=[embedding],
-                documents=[doc],
-                ids=[f"doc_{i}"]
-            )
+        # ゼロコンテキストテスト
+        zero_results = benchmark.run_zero_context_test(model, test_cases)
+        all_results.extend(zero_results)
+        
+        # RAGテスト
+        rag_results = benchmark.run_rag_test(model, test_cases, knowledge_base)
+        all_results.extend(rag_results)
+        
+        # 結果の保存
+        pd.DataFrame(all_results).to_csv(f'results_{model.replace("-", "_")}.csv')
     
-    def search(self, query: str, top_k: int = 3) -> List[str]:
-        """セマンティック検索"""
-        query_embedding = self.embedding_model.encode(query).tolist()
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k
-        )
-        return results['documents'][0]
-    
-    def build_context(self, relevant_docs: List[str]) -> str:
-        """検索結果からコンテキストを構築"""
-        context = "参考情報:\n"
-        for i, doc in enumerate(relevant_docs, 1):
-            context += f"{i}. {doc}\n\n"
-        context += "上記の情報を参考にして、以下の質問に答えてください。\n"
-        return context
+    return all_results
+
+if __name__ == "__main__":
+    results = run_full_experiment()
+    print("実験完了！")

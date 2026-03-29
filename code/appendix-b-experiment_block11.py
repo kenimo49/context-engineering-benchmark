@@ -1,69 +1,50 @@
-# Extracted from appendix-b-experiment.md
-# Block #11
+# parallel_experiment.py
+import asyncio
+import aiohttp
+from concurrent.futures import ThreadPoolExecutor
+import time
 
-# data_preprocessor.py
-import json
-from pathlib import Path
-from typing import Union, List, Dict
-
-class DataPreprocessor:
-    def __init__(self):
-        self.supported_formats = ['.txt', '.json', '.csv', '.md']
-    
-    def load_documents(self, data_path: Union[str, Path]) -> List[str]:
-        """様々な形式の文書を読み込み"""
-        path = Path(data_path)
-        documents = []
+class ParallelBenchmark:
+    def __init__(self, api_key: str, max_concurrent: int = 5):
+        self.api_key = api_key
+        self.max_concurrent = max_concurrent
         
-        if path.is_file():
-            documents = self._load_single_file(path)
-        elif path.is_dir():
-            for file_path in path.rglob('*'):
-                if file_path.suffix in self.supported_formats:
-                    documents.extend(self._load_single_file(file_path))
+    async def run_parallel_experiment(self, test_cases: List[Dict]) -> List[Dict]:
+        """非同期並列実行"""
+        semaphore = asyncio.Semaphore(self.max_concurrent)
         
-        return documents
-    
-    def _load_single_file(self, file_path: Path) -> List[str]:
-        """単一ファイルの読み込み"""
-        try:
-            if file_path.suffix == '.json':
-                return self._load_json(file_path)
-            elif file_path.suffix == '.csv':
-                return self._load_csv(file_path)
-            else:
-                return self._load_text(file_path)
-        except Exception as e:
-            print(f"Failed to load {file_path}: {e}")
-            return []
-    
-    def _load_json(self, file_path: Path) -> List[str]:
-        """JSON形式の処理"""
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            
-        if isinstance(data, list):
-            return [str(item) for item in data]
-        elif isinstance(data, dict):
-            return [f"{k}: {v}" for k, v in data.items()]
-        else:
-            return [str(data)]
-    
-    def create_test_cases(self, questions_file: str, expected_file: str) -> List[Dict]:
-        """自社のQ&Aデータからテストケース作成"""
-        with open(questions_file, 'r', encoding='utf-8') as f:
-            questions = [line.strip() for line in f.readlines()]
-            
-        with open(expected_file, 'r', encoding='utf-8') as f:
-            expected_answers = [line.strip() for line in f.readlines()]
+        async def bounded_request(test_case):
+            async with semaphore:
+                return await self._async_api_call(test_case)
         
-        test_cases = []
-        for i, (q, a) in enumerate(zip(questions, expected_answers)):
-            test_cases.append({
-                'id': f'custom_{i:03d}',
-                'prompt': q,
-                'expected': {'answer': a},
-                'domain': 'custom'
-            })
+        tasks = [bounded_request(case) for case in test_cases]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        return test_cases
+        # エラーハンドリング
+        valid_results = [r for r in results if not isinstance(r, Exception)]
+        errors = [r for r in results if isinstance(r, Exception)]
+        
+        if errors:
+            print(f"Encountered {len(errors)} errors during execution")
+        
+        return valid_results
+    
+    async def _async_api_call(self, test_case: Dict) -> Dict:
+        """非同期API呼び出し"""
+        # Anthropic SDKは現在async未対応のため、
+        # 実際の実装では ThreadPoolExecutor を使用
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            result = await loop.run_in_executor(
+                executor, self._sync_api_call, test_case
+            )
+        return result
+    
+    def _sync_api_call(self, test_case: Dict) -> Dict:
+        """同期API呼び出し（実際の処理）"""
+        # レート制限対応
+        time.sleep(0.1)  # 100ms間隔
+        
+        # 実際のAPI呼び出し処理
+        # （ここで ContextEngineeringBenchmark を使用）
+        pass

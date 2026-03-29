@@ -1,6 +1,3 @@
-# Extracted from ch11a-agentic-rag-concept.md
-# Block #4
-
 class HierarchicalAgenticRAG:
     def __init__(self):
         # 階層構造定義

@@ -1,73 +1,45 @@
-# Extracted from ch08-mcp.md
-# Block #9
-
-class EnterpriseContextAggregatorMCP:
-    """エンタープライズ環境の統合コンテキストサーバー"""
+class SecureContextMCPServer:
+    """セキュリティファーストのコンテキストサーバー"""
     
     def __init__(self):
-        self.connectors = {
-            "jira": JiraConnector(),
-            "confluence": ConfluenceConnector(),
-            "github": GitHubConnector(),
-            "slack": SlackConnector()
-        }
+        self.auth_manager = AuthenticationManager()
+        self.permission_manager = PermissionManager()
+        self.audit_logger = AuditLogger()
         
-    def register_tools(self):
-        return [
-            Tool(
-                name="get_project_context",
-                description="Gather comprehensive project context from multiple sources (Jira, GitHub, Confluence)",
-                input_schema={
-                    "type": "object", 
-                    "properties": {
-                        "project_key": {"type": "string"},
-                        "include_sources": {
-                            "type": "array",
-                            "items": {"enum": ["jira", "github", "confluence", "slack"]},
-                            "default": ["jira", "github"]
-                        }
-                    }
-                }
-            )
-        ]
-    
-    async def get_project_context(self, project_key, include_sources):
-        """マルチドメイン プロジェクトコンテキスト統合"""
-        context_parts = {}
+    async def handle_request(self, request, client_info):
+        # Step 1: 認証確認
+        user_context = await self.auth_manager.authenticate(client_info)
+        if not user_context:
+            raise AuthenticationError("Invalid authentication")
         
-        # 並列でコンテキスト取得
-        tasks = []
-        for source in include_sources:
-            if source in self.connectors:
-                tasks.append(
-                    self.get_source_context(source, project_key)
-                )
+        # Step 2: 権限確認
+        if not self.permission_manager.can_access_context(
+            user_context, request.resource
+        ):
+            raise PermissionError("Insufficient permissions")
         
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # 結果統合
-        for source, result in zip(include_sources, results):
-            if isinstance(result, Exception):
-                context_parts[source] = {"error": str(result)}
-            else:
-                context_parts[source] = result
-        
-        # 統合コンテキストの構造化
-        integrated_context = self.integrate_multi_source_context(
-            project_key, context_parts
+        # Step 3: 監査ログ
+        self.audit_logger.log_context_access(
+            user=user_context.user_id,
+            resource=request.resource,
+            timestamp=datetime.utcnow()
         )
         
-        return integrated_context
+        # Step 4: セキュアなコンテキスト提供
+        return await self.provide_secure_context(request, user_context)
     
-    def integrate_multi_source_context(self, project_key, context_parts):
-        """マルチソースコンテキストの知的統合"""
-        integrated = {
-            "project": project_key,
-            "summary": self.generate_project_summary(context_parts),
-            "current_status": self.extract_current_status(context_parts),
-            "key_contributors": self.identify_key_contributors(context_parts),
-            "recent_activity": self.aggregate_recent_activity(context_parts),
-            "blockers_and_issues": self.identify_blockers(context_parts)
-        }
+    async def provide_secure_context(self, request, user_context):
+        """ユーザーの権限レベルに応じたコンテキスト提供"""
+        base_context = await self.get_base_context(request.resource)
         
-        return integrated
+        # 権限ベースフィルタリング
+        filtered_context = self.permission_manager.filter_context_by_permissions(
+            base_context, user_context.permissions
+        )
+        
+        # 機密情報のマスキング
+        masked_context = self.apply_privacy_masking(
+            filtered_context, user_context.privacy_level
+        )
+        
+        return masked_context

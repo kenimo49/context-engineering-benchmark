@@ -1,52 +1,82 @@
-# Extracted from ch08-mcp.md
-# Block #7
-
-# CLI Implementation（114,000トークン）
-class TraditionalCLIApproach:
-    def automate_web_task(self, task_description):
-        # Step 1: タスクを細かいCLIコマンドに分解
-        cli_commands = self.decompose_to_cli_commands(task_description)
-        
-        # Step 2: 各コマンドの説明をコンテキストに含める
-        context = "Available CLI commands:\n"
-        context += self.generate_cli_documentation()  # 巨大なドキュメント
-        
-        # Step 3: 実行例とエラーハンドリングもコンテキストに含める
-        context += self.generate_cli_examples()
-        context += self.generate_error_handling_docs()
-        
-        # 結果: 114,000トークンの巨大コンテキスト
-        return self.llm_with_massive_context(task_description, context)
-
-# MCP Implementation（27,000トークン）  
-class MCPPlaywrightApproach:
-    def automate_web_task(self, task_description):
-        # Step 1: 高レベルなPlaywright MCPツールを使用
-        available_tools = [
-            "playwright_navigate(url)",
-            "playwright_click(selector)",
-            "playwright_type(selector, text)",
-            "playwright_screenshot()",
-            "playwright_extract_text(selector)"
-        ]
-        
-        # Step 2: 簡潔なツール説明のみコンテキストに含める
-        context = self.generate_concise_tool_descriptions(available_tools)
-        
-        # Step 3: MCPサーバーが詳細な実装を処理
-        return self.llm_with_optimized_context(task_description, context)
+class CustomerDataMCPServer:
+    """顧客データ専用MCPサーバー"""
     
-    def generate_concise_tool_descriptions(self, tools):
-        """MCP用の最適化されたツール説明"""
-        descriptions = []
+    def __init__(self, database_config):
+        self.db = CustomerDatabase(database_config)
+        self.privacy_filter = PrivacyFilter()
         
-        for tool in tools:
-            # 必要最小限の情報のみ
-            desc = {
-                "name": tool.split("(")[0],
-                "purpose": self.get_tool_purpose(tool),
-                "when_to_use": self.get_usage_pattern(tool)
-            }
-            descriptions.append(desc)
+    def register_resources(self):
+        return [
+            Resource(
+                uri="customer://profile/{customer_id}",
+                name="Customer Profile",
+                description="Customer profile information with privacy filtering",
+                mime_type="application/json"
+            ),
+            Resource(
+                uri="customer://orders/{customer_id}",
+                name="Order History", 
+                description="Customer order history for support context",
+                mime_type="application/json"
+            )
+        ]
+    
+    def register_tools(self):
+        return [
+            Tool(
+                name="lookup_customer",
+                description="Look up customer information by email or ID for support context",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "identifier": {"type": "string", "description": "Email or customer ID"},
+                        "include_orders": {"type": "boolean", "default": False}
+                    }
+                }
+            ),
+            Tool(
+                name="update_customer_notes", 
+                description="Add support notes to customer profile",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "customer_id": {"type": "string"},
+                        "note": {"type": "string", "description": "Support interaction note"}
+                    }
+                }
+            )
+        ]
+    
+    async def handle_tool_call(self, tool_name, arguments):
+        if tool_name == "lookup_customer":
+            return await self.lookup_customer_for_context(arguments)
+        elif tool_name == "update_customer_notes":
+            return await self.update_customer_notes(arguments)
+        else:
+            raise ValueError(f"Unknown tool: {tool_name}")
+    
+    async def lookup_customer_for_context(self, arguments):
+        """Context Engineering最適化された顧客検索"""
+        customer_data = await self.db.lookup_customer(arguments["identifier"])
         
-        return json.dumps(descriptions, indent=2)  # 簡潔なJSON形式
+        if not customer_data:
+            return {"error": "Customer not found"}
+        
+        # プライバシーフィルタリング
+        filtered_data = self.privacy_filter.filter_for_support_context(
+            customer_data
+        )
+        
+        # Context用の構造化
+        context_optimized = {
+            "customer_summary": filtered_data["summary"],
+            "support_relevant_info": filtered_data["support_info"],
+            "recent_interactions": filtered_data["recent_interactions"][:3]
+        }
+        
+        if arguments.get("include_orders"):
+            context_optimized["recent_orders"] = await self.get_recent_orders_summary(
+                customer_data["id"]
+            )
+        
+        return context_optimized

@@ -1,23 +1,18 @@
-# Extracted from ch06-rag.md
-# Block #5
-
-embedding_models = {
-    "multilingual-e5-large": {
-        "dimensions": 1024,
-        "languages": ["ja", "en", "多言語"],
-        "performance": "高",
-        "cost": "中"
+chunking_decision_tree = {
+    "technical_docs": {
+        "strategy": "recursive",
+        "reason": "コードブロックと説明の分離が重要"
     },
-    "text-embedding-3-large": {
-        "dimensions": 3072,  
-        "languages": ["ja", "en", "多言語"],
-        "performance": "最高",
-        "cost": "高"
+    "legal_documents": {
+        "strategy": "semantic", 
+        "reason": "条項の意味的一貫性が重要"
     },
-    "sentence-transformers/all-MiniLM-L6-v2": {
-        "dimensions": 384,
-        "languages": ["en", "限定的日本語"],
-        "performance": "中",
-        "cost": "低"
+    "news_articles": {
+        "strategy": "fixed_length",
+        "reason": "均一な処理速度が重要"
+    },
+    "conversation_logs": {
+        "strategy": "semantic",
+        "reason": "話題の切れ目での分割が重要"
     }
 }

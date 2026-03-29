@@ -1,54 +1,71 @@
-# Extracted from ch08-mcp.md
-# Block #4
+class ContextAwareTool:
+    def __init__(self, name, description, parameters, context_hints=None):
+        self.name = name
+        self.description = description  # これがLLMのコンテキストになる
+        self.parameters = parameters
+        self.context_hints = context_hints or {}
+    
+    def to_context_description(self):
+        """Context Engineering最適化されたツール説明"""
+        context_desc = f"""
+Tool: {self.name}
 
-class CodeRepositoryMCPServer:
-    """コードリポジトリ専用MCPサーバー"""
+Purpose: {self.description}
+
+When to use:
+{self._generate_usage_context()}
+
+Parameters:
+{self._format_parameters_for_context()}
+
+Example usage:
+{self._generate_example_usage()}
+
+Context considerations:
+{self._generate_context_considerations()}
+"""
+        return context_desc
     
-    def __init__(self, repository_path):
-        self.repo_path = repository_path
-        self.code_analyzer = CodeStructureAnalyzer()
-        self.git_analyzer = GitHistoryAnalyzer()
+    def _generate_usage_context(self):
+        """いつこのツールを使うべきかの説明"""
+        usage_patterns = self.context_hints.get('usage_patterns', [])
         
-    async def handle_resource_request(self, resource_uri):
-        if resource_uri.startswith("code://"):
-            return await self.get_code_context(resource_uri)
-        elif resource_uri.startswith("git://"):
-            return await self.get_git_context(resource_uri)
-        else:
-            raise ValueError(f"Unsupported resource URI: {resource_uri}")
+        if not usage_patterns:
+            return "Use when the task requires this tool's functionality."
+        
+        return "\n".join([f"- {pattern}" for pattern in usage_patterns])
     
-    async def get_code_context(self, resource_uri):
-        # パスの解析
-        file_path = resource_uri.replace("code://", "")
-        full_path = os.path.join(self.repo_path, file_path)
+    def _generate_context_considerations(self):
+        """Context Engineering上の考慮事項"""
+        considerations = []
         
-        if os.path.isfile(full_path):
-            return await self.get_file_context(full_path)
-        elif os.path.isdir(full_path):
-            return await self.get_directory_context(full_path)
-        else:
-            raise FileNotFoundError(f"Path not found: {file_path}")
-    
-    async def get_file_context(self, file_path):
-        """ファイルのContext Engineering最適化"""
-        # ファイル分析
-        analysis = self.code_analyzer.analyze_file(file_path)
+        if self.context_hints.get('high_latency'):
+            considerations.append("Tool has high latency - consider batching requests")
         
-        context = {
-            "file_path": file_path,
-            "language": analysis.language,
-            "summary": analysis.summary,
-            "key_functions": analysis.key_functions[:5],  # 重要な関数のみ
-            "dependencies": analysis.dependencies,
-            "recent_changes": await self.git_analyzer.get_recent_changes(
-                file_path, days=7
-            )
-        }
+        if self.context_hints.get('expensive_operation'):
+            considerations.append("Tool is expensive - verify necessity before use")
         
-        # Context用に最適化されたファイル内容
-        if analysis.estimated_tokens > 2000:
-            context["content"] = self.summarize_code_file(file_path)
-        else:
-            context["content"] = self.read_file_with_line_numbers(file_path)
+        if self.context_hints.get('requires_confirmation'):
+            considerations.append("Tool requires user confirmation for destructive operations")
         
-        return context
+        return "\n".join([f"- {c}" for c in considerations])
+
+# 実際のツール定義例
+email_tool = ContextAwareTool(
+    name="send_email",
+    description="Send an email to specified recipients with subject and body",
+    parameters={
+        "to": {"type": "string", "description": "Recipient email address"},
+        "subject": {"type": "string", "description": "Email subject line"},
+        "body": {"type": "string", "description": "Email body content"}
+    },
+    context_hints={
+        "usage_patterns": [
+            "User explicitly requests to send an email",
+            "Automated notification is required",
+            "Follow-up communication is needed"
+        ],
+        "expensive_operation": True,
+        "requires_confirmation": True
+    }
+)

@@ -1,40 +1,51 @@
-# Extracted from ch07-full-ce.md
-# Block #5
-
-class ContextCompressor:
-    def __init__(self, summarization_llm):
-        self.summarizer = summarization_llm
+class AdvancedMemoryManager:
+    def __init__(self):
+        self.short_term_memory = ConversationBuffer(max_size=10)
+        self.long_term_memory = PersistentMemoryStore()
+        self.memory_scorer = MemoryRelevanceScorer()
         
-    def compress_context(self, retrieved_docs, target_length=2000):
-        if self.estimate_total_tokens(retrieved_docs) <= target_length:
-            return retrieved_docs
-            
-        # 長い文書を優先的に圧縮
-        compressed_docs = []
-        for doc in retrieved_docs:
-            if len(doc.content) > 1000:
-                compressed_content = self.summarizer.summarize(
-                    doc.content,
-                    max_length=500,
-                    preserve_key_facts=True
-                )
-                compressed_docs.append(
-                    Document(content=compressed_content, metadata=doc.metadata)
-                )
-            else:
-                compressed_docs.append(doc)
-                
-        return compressed_docs
+    def manage_context_memory(self, current_query, max_memory_tokens=4000):
+        # 短期記憶からの関連情報
+        recent_relevant = self.select_relevant_short_term_memory(
+            current_query, 
+            self.short_term_memory.get_recent(5)
+        )
+        
+        # 長期記憶からの関連情報
+        long_term_relevant = self.select_relevant_long_term_memory(
+            current_query,
+            lookback_days=30
+        )
+        
+        # メモリ統合・最適化
+        optimized_memory = self.optimize_memory_context(
+            recent_relevant, 
+            long_term_relevant, 
+            max_memory_tokens
+        )
+        
+        return optimized_memory
     
-    def hierarchical_compression(self, documents):
-        """階層的圧縮: 詳細→要点→エッセンス"""
-        # Level 1: 不要な詳細の除去
-        level1 = [self.remove_redundancy(doc) for doc in documents]
+    def select_relevant_long_term_memory(self, query, lookback_days=30):
+        # 時間減衰を考慮したスコアリング
+        memories = self.long_term_memory.search(
+            query=query,
+            time_range=f"last_{lookback_days}_days"
+        )
         
-        # Level 2: 要点の抽出
-        level2 = [self.extract_key_points(doc) for doc in level1]
+        scored_memories = []
+        for memory in memories:
+            relevance_score = self.memory_scorer.calculate_relevance(query, memory)
+            freshness_score = self.memory_scorer.calculate_freshness(memory.timestamp)
+            importance_score = self.memory_scorer.calculate_importance(memory)
+            
+            combined_score = (
+                relevance_score * 0.5 + 
+                freshness_score * 0.3 + 
+                importance_score * 0.2
+            )
+            
+            scored_memories.append((memory, combined_score))
         
-        # Level 3: エッセンスの凝縮
-        level3 = self.merge_related_points(level2)
-        
-        return level3
+        # スコア順ソート
+        return sorted(scored_memories, key=lambda x: x[1], reverse=True)[:5]

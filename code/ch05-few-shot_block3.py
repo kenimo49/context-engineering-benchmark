@@ -1,6 +1,3 @@
-# Extracted from ch05-few-shot.md
-# Block #12
-
 design_goals = {
     "output_format": "JSON形式で構造化された回答",
     "tone": "礼儀正しく専門的",
